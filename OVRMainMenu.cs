@@ -25,6 +25,8 @@ limitations under the License.
 ************************************************************************************/
 using UnityEngine;
 using System.Collections;
+using System;
+using System.IO;
 
 //-------------------------------------------------------------------------------------
 // ***** OVRMainMenu
@@ -142,7 +144,6 @@ public class OVRMainMenu : MonoBehaviour
 	// Crosshair system, rendered onto 3D plane
 	public Texture  CrosshairImage 			= null;
 	private OVRCrosshair Crosshair        	= new OVRCrosshair();
-	
 	// Create a delegate for update functions
 	private delegate void updateFunctions();
 	private updateFunctions UpdateFunctions;
@@ -621,7 +622,7 @@ public class OVRMainMenu : MonoBehaviour
 	// * * * * * * * * * * * * * * * * *
 	// OnGUI
  	void OnGUI()
- 	{	
+ 	{		
 		// Important to keep from skipping render events
 		if (Event.current.type != EventType.Repaint)
 			return;
@@ -696,7 +697,61 @@ public class OVRMainMenu : MonoBehaviour
 		// ***
 		// Restore previous GUI matrix
 		GUI.matrix = svMat;
- 	}
+
+
+		//**           ***//
+		string message = read_velocity() +
+						"\n" + 
+						read_time_file() +
+						"\n" + 
+						read_distance_traveled() + 
+						"\n" + 
+						read_acceleration();
+
+		GUI.Box (new Rect (Screen.width/14,Screen.height/5,200,100), message);
+
+	}
+		
+	/*
+	string velocity_file =  			"files/unity_velocity.txt" ;
+	string time_file  = 				"files/unity_time.txt";
+	string distance_traveled_file =  	"files/unity_distance_traveled.txt"; 
+	string acceleration_file = 			"files/unity_acceleration.txt";
+	*/
+
+	string velocity_file =  "C:\\Users\\macartur_\\Desktop\\files\\unity_velocity.txt" ;
+	string time_file  = "C:\\Users\\macartur_\\Desktop\\files\\unity_time.txt";
+	string distance_traveled_file =   "C:\\Users\\macartur_\\Desktop\\files\\unity_distance_traveled.txt"; 
+	string acceleration_file = "C:\\Users\\macartur_\\Desktop\\files\\unity_acceleration.txt";
+
+	string read_velocity(){
+		string velocity = read_file (velocity_file);
+		return "Velocidade Media: "+velocity+" KM/h";
+	}
+
+	string read_time_file(){
+		string time = read_file (time_file);
+		return "Tempo percorrido: "+ time+" min.";
+	}
+	
+	string read_distance_traveled(){
+		string distance_traveled = read_file (distance_traveled_file);
+		return "Distancia percorrida:  "+distance_traveled+ " km";
+	}
+	
+	string read_acceleration(){
+		string acceleration = read_file (acceleration_file);
+		return "Aceleracao Instantania : "+acceleration  + " km/s² ";
+	}
+
+	//method to read a file
+	string read_file(string file){
+		StreamReader sr = new StreamReader (file);
+		string text = sr.ReadToEnd();
+		return text;
+	}
+
+
 	
 	// GUIShowLevels
 	void GUIShowLevels()
@@ -774,20 +829,6 @@ public class OVRMainMenu : MonoBehaviour
 			GuiHelper.StereoBox (VRVarsSX, y += StepY, VRVarsWidthX, VRVarsWidthY, 
 								 ref strSpeedRotationMultipler, Color.white);
 		}
-		
-		// Eventually remove distortion from being changed
-		/*
-		// Don't draw if CameraController is not present
-		if(CameraController != null)
-		{
-			// Distortion k values
-			y += StepY;
-			GUIStereoBox (VRVarsSX, y, VRVarsWidthX, VRVarsWidthY, 
-							 ref strDistortion, 
-							 Color.red);
-		}
-		*/
-			
 	}
 	
 	// SNAPSHOT MANAGEMENT

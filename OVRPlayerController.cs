@@ -74,6 +74,7 @@ public class OVRPlayerController : OVRComponent
 	// separately from the head (i.e. the body)
 	protected Transform DirXform = null;
 	protected Transform Bicycle = null;
+	
 	// We can adjust these to influence speed and rotation of player controller
 	private float MoveScaleMultiplier     = 1.0f; 
 	private float RotationScaleMultiplier = 1.0f; 
@@ -92,7 +93,7 @@ public class OVRPlayerController : OVRComponent
 		
 		// We use Controller to move player around
 		Controller = gameObject.GetComponent<CharacterController>();
-
+		
 		if(Controller == null)
 			Debug.LogWarning("OVRPlayerController: No CharacterController attached.");
 					
@@ -122,7 +123,7 @@ public class OVRPlayerController : OVRComponent
 				break;
 			}
 
-			if(Xforms[i].name == "Bicycle.003")
+			if(Xforms[i].name == "OVRPlayerController") //"Bicycle.003")
 			{
 				Bicycle = Xforms[i];
 			}
@@ -138,15 +139,16 @@ public class OVRPlayerController : OVRComponent
 	new public virtual void Start()
 	{
 		base.Start();
+		
 		InitializeInputs();	
 		SetCameras();
 	}
-
+		
 	// Update 
 	new public virtual void Update()
 	{
-
 		base.Update();
+		
 		// Test: get Y from sensor 2 
 		if(OVRDevice.SensorCount == 2)
 		{
@@ -154,7 +156,7 @@ public class OVRPlayerController : OVRComponent
 			OVRDevice.GetPredictedOrientation(1, ref q);
 			YfromSensor2 = q.eulerAngles.y;
 		}
-
+		
 		UpdateMovement();
 
 		Vector3 moveDirection = Vector3.zero;
@@ -211,28 +213,16 @@ public class OVRPlayerController : OVRComponent
 		if(HaltUpdateMovement == true)
 			return;
 	
-		bool moveForward = false;
+		bool moveForward = true;
 		bool moveLeft  	 = false;
 		bool moveRight   = false;
 		bool moveBack    = false;
 				
-		MoveScale = 1.0f;
+		MoveScale = read_speed();
 			
-		// * * * * * * * * * * *
-		// Keyboard input
-			
-		// Move
-			
-		// WASD
+		//*****
 		if (Input.GetKey(KeyCode.W)) moveForward = true;
-	//	if (Input.GetKey(KeyCode.A)) moveLeft	 = true;
 		if (Input.GetKey(KeyCode.S)) moveBack 	 = true; 
-	//	if (Input.GetKey(KeyCode.D)) moveRight 	 = true; 
-		// Arrow keys
-		if (Input.GetKey(KeyCode.UpArrow))    moveForward = true;
-		if (Input.GetKey(KeyCode.LeftArrow))  moveLeft 	  = true;
-		if (Input.GetKey(KeyCode.DownArrow))  moveBack 	  = true; 
-		if (Input.GetKey(KeyCode.RightArrow)) moveRight   = true; 
 			
 		if ( (moveForward && moveLeft) || (moveForward && moveRight) ||
 			 (moveBack && moveLeft)    || (moveBack && moveRight) )
@@ -245,7 +235,7 @@ public class OVRPlayerController : OVRComponent
 		MoveScale *= DeltaTime;
 			
 		// Compute this for key movement
-		float moveInfluence = Acceleration * MoveScale * MoveScaleMultiplier;
+		float moveInfluence = Acceleration * 0.1f * MoveScale * MoveScaleMultiplier;
 			
 		// Run!
 		if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
@@ -267,17 +257,6 @@ public class OVRPlayerController : OVRComponent
 			
 		// compute for key rotation
 		float rotateInfluence = DeltaTime * RotationAmount * RotationScaleMultiplier;
-			
-		//reduce by half to avoid getting ill
-		//if (Input.GetKey(KeyCode.Q)) 
-		//	YRotation -= rotateInfluence * 0.5f;  
-		//if (Input.GetKey(KeyCode.E)) 
-		//	YRotation += rotateInfluence * 0.5f; 
-		
-		// * * * * * * * * * * *
-		// Mouse input
-			
-		// Move
 			
 		// Rotate
 		float deltaRotation = 0.0f;
@@ -341,37 +320,34 @@ public class OVRPlayerController : OVRComponent
 	// CameraController. For now, we are simply copying the CameraController rotation into 
 	// PlayerController, so that the PlayerController always faces the direction of the 
 	// CameraController. When we add a body, this will change a bit..
-	float current_position = 0;
+	
+
 	public virtual void UpdatePlayerForwardDirTransform()
 	{
-		if ((DirXform != null) && (CameraController != null)) {
-					//capturar botao E e rotacionar para a Direita
-					if (Input.GetKey(KeyCode.D)) {	
-							current_position += 3f;
-					}
-		
-					// capturar o botao Q e rotacionar para a Esquerda
-					if (Input.GetKey (KeyCode.A)) {
-							current_position -= 3f;
-					}
-		
+		float current_position = 0;
+		if ((DirXform != null) && (CameraController != null))
+		{
+					current_position = read_rotation();
+
 					//vetor identidade
 					Quaternion i = Quaternion.identity;
+
 					// rotataciona a bicicleta
-					Quaternion d = Quaternion.Euler (new Vector3 (90, current_position, 0));
+					Quaternion d = Quaternion.Euler (new Vector3 (0, current_position, 0));
 					Bicycle.rotation = i * d;
 		
+					//Ajustando a CameraControler
+					CameraController.SetYRotation (YRotation + current_position);
+
 					//rotaciona o vetor direçao
-					d = Quaternion.Euler (new Vector3 (0, current_position + 2f, 0));
+					d = Quaternion.Euler (new Vector3 (0, current_position, 0));
 					DirXform.rotation = i * d ;
 		
-					///escreve arquivos 
-					//write_position();
-					//write_rotation();
-					//write_altitude();
-			}
+					/// write file
+					write_altitude();
+		}
 	}
-	
+
 	///////////////////////////////////////////////////////////
 	// PUBLIC FUNCTIONS
 	///////////////////////////////////////////////////////////
@@ -455,36 +431,69 @@ public class OVRPlayerController : OVRComponent
 	{
 		HaltUpdateMovement = haltUpdateMovement;
 	}
+	
+	/*
+	string file_position = "files/unity_position.txt";
+	string file_speed 	 = "files/unity_speed.txt";        
+	string file_rotation = "files/unity_rotation.txt";   
+	string file_altitude = "files/unity_altitude.txt";
+	*/
+
+	string file_position = "C:\\Users\\macartur_\\Desktop\\files\\unity_position.txt";
+	string file_speed 	 = "C:\\Users\\macartur_\\Desktop\\files\\unity_speed.txt";        
+	string file_rotation = "C:\\Users\\macartur_\\Desktop\\files\\unity_rotation.txt";   
+	string file_altitude = "C:\\Users\\macartur_\\Desktop\\files\\unity_altitude.txt";
+
 
 	//  unity position
 	void write_position(){
-		string file_position =  "../files/unity_position.txt";
-		write_file( Bicycle.transform.position.ToString() ,file_position);
+		Vector3 position = Bicycle.transform.position;
+		string position_text = String.Format ("{0} {1} {2}", position.x.ToString (),position.y.ToString (), position.z.ToString ());	                                      
+		write_file(position_text ,file_position);
 	}
 	//unity rotation
 	void write_rotation(){
-		string file_rotation = "../files/unity_rotation.txt";
 		write_file(Bicycle.transform.rotation.eulerAngles.y.ToString(),file_rotation);
 	}
+
 	//unity altitude
 	void  write_altitude(){
-		string file_altitude = "../files/unity_altitude.txt";
 		write_file (Bicycle.position.y.ToString(), file_altitude);
 	}
-	
-	//unity info
-	//	string file_info = "../files/unity_info.txt";
-	//todo
-	//	void write_info(){
-	//	}
-	
-	//method to read a file
-	string read_file(string file){
-		StreamReader sr = new StreamReader (file);
-		string text = sr.ReadToEnd();
-		return text;
+
+	float current_speed = 0.0f;
+	float read_speed(){
+		float next_speed = float.Parse(read_file (file_speed));
+		if (next_speed == 0.0f) {
+			current_speed = 0.0f;
+			return current_speed;
+		}
+		current_speed =  Math.Abs(next_speed - current_speed);
+		return current_speed;
 	}
-	
+
+	float current_rotation = 0.0f;
+	Boolean can_read = true;
+	float read_rotation(){
+
+		if (! can_read) {
+			can_read = true;
+			return current_rotation;
+		}
+
+		float previous_rotation = 0.0f;
+		float difference = 0.0f;
+		float next_rotation = 0.0f;
+
+		next_rotation = float.Parse(read_file (file_rotation));
+		difference = next_rotation - previous_rotation;
+		current_rotation += (difference == 0.0f ? previous_rotation : difference);
+		previous_rotation = next_rotation;
+		can_read = false;
+		return current_rotation;
+
+	}
+
 	void OnGUI(){
 		// get Control C
 		if (Event.current.Equals(Event.KeyboardEvent("^c"))) {
@@ -492,12 +501,20 @@ public class OVRPlayerController : OVRComponent
 		}
 	}
 
-		
+	//method to read a file
+	string read_file(string file){
+		StreamReader sr = new StreamReader (file);
+		string text =  sr.ReadToEnd();
+		sr.Close ();
+		return text;
+	}
+			
+
+	
 	void write_file(string text, string file){
-		StreamWriter sw = new StreamWriter(file,true);
+		StreamWriter sw = new StreamWriter(file);
 		sw.WriteLine (text);
 		sw.Flush ();
 		sw.Close ();
 	}
 }
-

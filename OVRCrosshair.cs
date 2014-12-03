@@ -201,7 +201,9 @@ public class OVRCrosshair
 	// ShouldDisplayCrosshair
 	bool ShouldDisplayCrosshair()
 	{	
-		if(Input.GetKeyDown (KeyCode.C))
+
+		//removendo crosshair
+		/*if(Input.GetKeyDown (KeyCode.C))
 		{
 			if(DisplayCrosshair == false)
 			{
@@ -214,8 +216,8 @@ public class OVRCrosshair
 			else
 				DisplayCrosshair = false;
 		}
-					
-		return DisplayCrosshair;
+		*/			
+		return false;//DisplayCrosshair;
 	}
 	
 	// CollisionWithGeometry
